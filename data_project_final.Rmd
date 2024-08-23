@@ -1,0 +1,491 @@
+---
+title: "Final Data Project"
+author: "Faith Gibson"
+output: html_notebook
+---
+
+# Final Data Project
+
+## Your objectives!
+
+To complete this project there are a few requirements you will need to fulfill. Remember that you are not on your own for this project! Data science is done best as a community, so please ask others (and instructors) questions you have when you get stuck!
+
+1. Clearly state the data science question and goal for the analysis you are embarking on.
+
+2. This project should be completely uploaded and up to date on GitHub. Follow the steps in `Pushing and Pulling Changes` chapter for how to git add, commit, and push the changes you have done.
+
+3. Follow good organization principles -- you should at least have 2 folders: a `results` folder and a `data` folder.
+
+4. You should also have a README
+
+5. Make a resulting plot that you save to a file.
+
+6. Write up your final observations in regards to your original question. Note that some data science projects end with "This isn't what I thought it would be" or "that's strange" or "I think this is leading into another question I would need to investigate". Whatever your observations may be, write them up in your main R Markdown.
+
+7. When you feel your analysis is ready for review, send your instructor the GitHub link to your project so they can review it.
+
+8. Pat yourself on the back for all this work! You are a data scientist!
+
+## Data Sources
+
+* **Characteristics of Human-Tiger Conflicts in Indian Sundarban:** https://doi.org/10.7910/DVN/YS0WTE
+(By Chatterjee, Mayukh et al.)
+    + Summary of Data: Survey collecting data from a sample of 1,095 people in the Sundarbans region of West Bengal, India recounting details of  human-tiger conflicts from survivors, relatives, and eyewitnesses, as well as answers to open-ended questions aiming to assess participants' prior knowledge and perception regarding tigers. The survey was carried out between August 2018 and November 2019.
+
+* **Wildlife Protection Society of India (WPSI)'s Tiger Poaching Statistics 1994-2023:** https://www.wpsi-india.org/statistics/index.php > Tiger Mortality > Tiger Poaching 1994-2023
+    + Recreated by hand into a Google Sheet [here](https://docs.google.com/spreadsheets/d/1G7aOVW9Jfa8vUMYe-YWrQUCyIFWQcj7uvLl7veB1Hzw/edit?usp=sharing).
+    + Summary of Data: Compiled reports of known cases of unnatural tiger deaths caused by poachers across all of India, ranging from the year 1994 to 2023.
+
+* **Tiger Conservation Awareness Survey** https://www.kaggle.com/datasets/kawalmeetsingh/tiger-conservation-data/data
+    + Summary of Data: Survey sampling ~121 people, measuring their awareness of tiger conservation reserves and the main threats contributing to tiger population decline in India.
+
+## The Goal of This Analysis
+
+Since the dawn of human civilization in India, humans have found themselves in conflict with tigers, big cats who have inhabited the land since long before our species took our first steps out of Africa. This conflict was, at one point, so great that we almost hunted the tiger to extinction, leading to it being granted the status of protected species in recent years.
+
+In this project, I set out to answer some questions I've had since learning about these cats as a young teen: "Why did we hunt tigers to such an extreme? Are tigers really that aggressive and dangerous? Do tigers also believe in the 'Golden Rule'?"
+
+Or, in a more 'data scientist' way to sum up these questions: "What interspecies and/or environmental variables have had an influence on tigers' disposition towards humans over time?"
+
+## Setting Up
+
+Load packages you will need for this analysis.
+
+```{r}
+install.packages("usethis")
+install.packages("janitor")
+install.packages("ggthemes")
+```
+
+```{r}
+library(tidyverse)
+library(readr)
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+library(usethis)
+library(janitor)
+library(ggthemes)
+```
+
+## Setting Up Directories
+
+Set up the directories you will need.
+
+```{r}
+if (!dir.exists("data")) {
+  dir.create("data")
+}
+if (!dir.exists("data/raw_data")) {
+  dir.create("data/raw_data")
+}
+if (!dir.exists("data/tidy_data")) {
+  dir.create("data/tidy_data")
+}
+if (!dir.exists("results")) {
+  dir.create("results")
+}
+```
+
+
+## Getting the Data
+
+The [first dataset](https://doi.org/10.7910/DVN/YS0WTE) describes characteristics of human-tiger conflicts, collected from 1,095 participants in the Sundarbans region of West Bengal, India via survey carried out between August 2018 and November 2019.
+
+The following variables are included in this dataset:
+  * Sl. No. (presumably Slot Number/ID)
+  * Time of Attack
+  * Year of Attack
+  * District
+  * Block
+  * Island Name
+  * Gram Panchayat (governing institution of village)
+  * Village Name
+  * Latitude of Village
+  * Longitude of Village
+  * Victim Gender
+  * Victim Age
+  * Primary Occupation of Victim
+  * Primary Occupation_2
+  * Victim Secondary Occupation
+  * Victim Secondary Occupation_2
+  * Victim's Primary Occupation After Attack
+  * Victim's Average Annual Income
+  * Land Owned by Victim (Bighas)
+  * Boat Ownership of Victim
+  * Education Level of Victim
+  * Marital Status of Victim
+  * Number of Dependents in Family of Victim
+  * Religious Background of Victim's Family
+  * Ethnicity of Victim's Family
+  * Permit Holding Status of Victim
+  * Animal Involved in Attack
+  * Sex of Animal (if Identified)
+  * Age Class of Animal (if Identified)
+  * Location of Attack
+  * Substrate Where Attack Occured
+  * Number of Eyewitnesses Present
+  * Outcome of Attack (on Victim)
+  * Position of Victim During Attack
+  * Direction of Attack
+  * Nature of Injury on Victim's Body
+  * Activity of Victim During Attack
+  * Tidal Status During Attack
+  * Distance Body/Victim Was Dragged by Animal
+  * Body/Victim Recovery Time (Hours)
+  * Recieved Medical Aid?
+  * Body Recovery Status
+  * Body of Victim Consumed (Approx %)
+  * PM Conducted Status
+  * Reported to Police
+  * Reported to FD (Forest Department)
+  * If Not, Why Not Reported
+  * Ex Gratia Filed/Not Filed
+  * Ex Gratia Amount Recieved
+  * Perception of Tiger Population in Sundarban (numbers)
+  * Perception of Area covered by the Sundarbans - Sq. Km.
+  * Perception - Environmental Beneficts of Sundarban
+  * Perception - When Did Humans Arrive Here
+  * Perception - Why Tigers Attack Humans
+  * Perception - Why Tigers Attack Humans_2
+  * Perception - What Can Reduce Attacks
+  * perception_awareness_attitude:how_to_reduce_attacks_other
+
+The [second dataset](https://docs.google.com/spreadsheets/d/1G7aOVW9Jfa8vUMYe-YWrQUCyIFWQcj7uvLl7veB1Hzw/edit?usp=sharing) is a ~~much more simple~~ table, recorded by hand using public data from the Wildlife Protection Society of India, found [here](https://www.wpsi-india.org/statistics/index.php).
+
+The following variables are included in this dataset:
+ * year
+ * tigers_killed
+ 
+ Last but not least, we will be using survey data found on [Kaggle](https://www.kaggle.com/datasets/kawalmeetsingh/tiger-conservation-data/data) focusing on awareness of tiger conservation reserves and threats.
+ 
+ The variables included in this dataset are:
+  * Email Address
+  * Name
+  * Age
+  * District
+  * State
+  * Are you aware about the “Project Tiger”?
+  * Do you know the Tiger conservation reserves present in your State?
+  * If yes, participants were asked to name any of the reserves.
+  * What are the main threats contributing to tiger population decline?
+  * Which threat do you think is the most prominent one?
+  * Are you aware about "Save the Tiger" and "Wildlife Week"?
+  * Can you name any organizations or initiatives working towards tiger conservation?
+  * Have you ever encountered a tiger in an urban or a suburban area?
+  * What will be your response/action in such a scenario?
+  * In your opinion, how does tiger conservation benefit local communities and the economy?
+  * Suppose that you spotted a poacher's trap in the forest. What would you do?
+  * How much would you rate the effectiveness of government policies related to tiger conservation?
+  * According to you, what can be the most prominent reason behind less effectiveness of the policies?
+
+```{r}
+tiger_conflict_df <- read_csv("data/raw_data/sundarban_tiger_conflict_data.csv")
+
+tiger_poaching_df <- read_csv("data/raw_data/tiger_poaching_data.csv")
+
+conservation_awareness_df <- read_csv("data/raw_data/tiger_conservation_awareness_survey.csv")
+```
+
+## Exploring the Data
+
+```{r}
+head(tiger_conflict_df)
+```
+
+```{r}
+print(tiger_poaching_df)
+```
+
+## Cleaning the data
+
+
+```{r}
+# Make column names easier to work with
+
+tiger_conflict_df <- tiger_conflict_df %>% clean_names()
+
+# Fix typos in column names
+
+tiger_conflict_df <- tiger_conflict_df %>%
+  rename(activity_of_victim_during_attack = activitiy_of_victim_during_attack) %>% 
+  rename(distance_body_victim_was_dragged_by_animal = distnace_body_victim_was_dragged_by_animal)
+  
+```
+
+Don't forget to save this as a file in the tidy_data directory!
+
+```{r}
+write_csv(tiger_conflict_df, "data/tidy_data/tiger_conflict_df.csv")
+```
+
+
+While tiger_conflict_df is rich in variables to explore, a lot of them don't seem to be all that relevant to our analysis. So, we will be selecting the ones we really want to focus on and save them to a separate object with the following code:
+
+```{r}
+conflict_df_clean <- tiger_conflict_df %>% 
+  select(sl_no, year_of_attack, victim_gender, victim_age, permit_holding_status_of_victim, location_of_attack, activity_of_victim_during_attack, body_of_victim_consumed_approx_percent, perception_why_tigers_attack_humans, perception_what_can_reduce_attacks)
+```
+
+We'll also want to reduce our number of observations to only include those that fall within the range of years in tiger_poaching_df, so we can compare the information in both data frames more easily. We can achieve this by using an inner join:
+
+```{r}
+tiger_df_combined <- conflict_df_clean %>% inner_join(tiger_poaching_df, by = join_by(year_of_attack == year))
+```
+
+Now that our data frames are combined, we finally arrive at the fun part...
+
+## Plotting the Data!
+
+# Why Do Tigers Attack Humans?
+
+```{r}
+# Separate observations with multiple answers into different rows, so there aren't a thousand groups on the X-axis
+
+conflict_df_clean <- 
+  conflict_df_clean %>% 
+  separate_longer_delim(perception_why_tigers_attack_humans, delim = " ")
+```
+
+```{r}
+# Fix some observations that decided to get Funky(tm) while separating
+
+conflict_df_clean <- replace(conflict_df_clean, conflict_df_clean=='', NA)
+
+conflict_df_clean <- 
+  conflict_df_clean %>% 
+  mutate(conflict_df_clean, perception_why_tigers_attack_humans =
+    gsub("^((?!(gods_act_dakshin_rai|lot_of_tigers|other|they_are_man-eaters|humans_go_into_forests|no_food_in_forests|tides)).)*$",
+         "gods_act_dakshin_rai",
+         perception_why_tigers_attack_humans,
+         perl = TRUE)
+    )
+```
+
+```{r}
+# Check that it worked using the following code
+
+as.factor(conflict_df_clean$perception_why_tigers_attack_humans) %>% 
+levels()
+```
+
+```{r}
+# color friendly palette from http://www.cookbook-r.com/Graphs/Colors_(ggplot2)/:
+cbPalette <- c("#663300", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7", "#000000")
+
+conflict_df_clean %>% 
+  ggplot(aes(perception_why_tigers_attack_humans, 
+             fill = perception_why_tigers_attack_humans)) +
+  geom_bar() +
+  theme_minimal() +
+  theme(axis.title = element_blank(),
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        axis.line = element_line(color = "black")) +
+  scale_fill_manual(name = "Why Do Tigers Attack Humans?", 
+                    labels = c("Act of God(s)", "Humans Go Into Forests",
+                                 "Lots of Tigers", "No Food in Forests",
+                                 "Other", "They Are Man-Eaters", "Tides",
+                                 "NA"),
+                    values=cbPalette) +
+  scale_y_continuous(expand = c(0, 0), limits = c(0, 800))
+
+# save plot as png:
+ggsave(
+  "why_tigers_attack.png",
+  plot = last_plot(),
+  path = "results/",
+  dpi = 300,
+  bg = "white")
+```
+
+
+# Humans Attacked/Killed By Tigers vs. Tigers Killed By Humans
+
+To make things easier, let's count the observations in the 'year_of_attack' column and save them in a separate object. 
+
+```{r}
+humans_attacked_per_year <- tiger_conflict_df %>% count(year_of_attack)
+
+humans_attacked_per_year <- humans_attacked_per_year %>%
+  rename(year = year_of_attack) %>% 
+  rename(humans_attacked = n)
+```
+
+Then, we're going to join this new object with 'tiger_poaching_df' and save it as another new object.
+
+```{r}
+human_tiger_attacks <- inner_join(humans_attacked_per_year, tiger_poaching_df, by = "year")
+```
+
+Now, let's compare the number of humans attacked by tigers and tigers killed by humans from 1994-2019:
+
+```{r}
+colors <- c("tigers_killed" = "orange", "humans_attacked" = "blue")
+
+human_tiger_attacks %>%
+  ggplot(aes(x = year)) +
+  geom_line(aes(y = tigers_killed, color = "tigers_killed"), linewidth = 1.5) +
+  geom_line(aes(y = humans_attacked, color = "humans_attacked"), linewidth = 1.5) +
+  labs(title = "Human-Tiger Conflicts Over Time (1994-2019)",
+       x = "year",
+       y = "reported incidents",
+       color = "Legend") +
+  scale_color_manual(values = colors)
+
+# save plot as png:
+ggsave(
+  "human-tiger_conflicts.png",
+  plot = last_plot(),
+  path = "results/",
+  dpi = 300,
+  bg = "white")
+```
+
+# What Are The Main Threats Contributing to Tiger Population Decline?
+
+```{r}
+# Similar set-up to our first plot
+conservation_awareness_df <- conservation_awareness_df %>% clean_names()
+
+tiger_main_threats <- 
+  conservation_awareness_df %>% 
+  select(what_are_the_main_threats_contributing_to_tiger_population_decline_you_can_select_one_or_more)
+
+tiger_main_threats <- rename(tiger_main_threats, "main_threats_tiger_pop" = "what_are_the_main_threats_contributing_to_tiger_population_decline_you_can_select_one_or_more")
+```
+
+```{r}
+tiger_main_threats <- tiger_main_threats %>% 
+  separate_longer_delim(main_threats_tiger_pop, delim = ", ") %>% 
+  separate_longer_delim(main_threats_tiger_pop, delim = ",")
+```
+
+```{r}
+tiger_main_threats <- tiger_main_threats %>% mutate_all(na_if,"")
+```
+
+```{r}
+as.factor(tiger_main_threats$main_threats_tiger_pop) %>% 
+levels()
+```
+
+```{r}
+tiger_main_threats %>% 
+  count(main_threats_tiger_pop) %>% 
+  ggplot(aes(reorder(main_threats_tiger_pop, n), n, fill = main_threats_tiger_pop)) +
+  geom_bar(stat = "identity") +
+  coord_flip() +
+  scale_fill_manual(name = "Main Threats to Tiger Populations",
+                    labels = c("Climate Change", "Other", "Habitat Fragmentation", "Human-Wildlife Conflict", "Hunting and Poaching", "Lack of Local Participation", "Lack of Proper Systems", "Poor Program/Scheme Implementation", "Villagers Disturbing Forest"), values = cbPalette) +
+  theme_classic() +
+  theme(axis.text = element_blank(),
+        axis.title = element_blank(),
+        axis.ticks = element_blank(),
+        axis.line.x = element_blank())
+
+# save plot as png:
+ggsave(
+  "main_threats.png",
+  plot = last_plot(),
+  path = "results/",
+  dpi = 300,
+  bg = "white")
+```
+
+# What complications are conservation efforts facing?
+
+```{r}
+conservation_complications <-
+  conservation_awareness_df %>%
+  select(according_to_you_what_can_be_the_most_prominent_reason_behind_less_effectiveness_of_the_policies) %>% 
+  rename(why_policies_less_effective = according_to_you_what_can_be_the_most_prominent_reason_behind_less_effectiveness_of_the_policies) %>% 
+  separate_longer_delim(why_policies_less_effective, delim = " and ")
+```
+
+```{r}
+conservation_complications <-
+  conservation_complications %>% 
+  mutate(why_policies_less_effective = 
+    str_to_sentence(conservation_complications$why_policies_less_effective)
+  ) %>% 
+  mutate(why_policies_less_effective =
+           str_replace(why_policies_less_effective, "Lack of backbone to support organisation working for tiger conservation", "Lack of support for organizations")) %>% 
+  mutate(why_policies_less_effective =
+           str_replace(why_policies_less_effective, "Less awareness among people", "Lack of awareness among people"))
+```
+
+```{r}
+as.factor(conservation_complications$why_policies_less_effective) %>% 
+levels()
+```
+
+
+```{r}
+conservation_complications %>% 
+  ggplot(aes(factor(1), fill = why_policies_less_effective)) +
+  geom_bar(width = 1, color = "white") +
+  coord_polar(theta = "y") +
+  geom_col(aes(x=0,y=0)) +
+  theme_void() +
+  theme(plot.background = element_rect(color = "black"),
+        plot.margin = unit(c(0,1,0,0),"cm")) +
+  scale_fill_manual(name = "Conservation Complications", values = cbPalette)
+
+# save plot as png:
+ggsave(
+  "conservation_complications.png",
+  plot = last_plot(),
+  path = "results/",
+  dpi = 300,
+  bg = "white")
+```
+
+
+## Getting the Stats
+
+There's only two numeric variables we could test, so...
+
+```{r}
+cor.test(tiger_df_combined$year_of_attack, tiger_df_combined$tigers_killed)
+```
+
+Absolutely beautiful. Muah. Chef's kiss.
+
+### Conclusion
+
+Write up your thoughts about this data science project here and answer the following questions:
+
+**- What did you find out in regards to your original question?**
+
+I've found that us humans could very well be to blame for the tiger's aggressiveness towards our species. It is unlikely that tigers are natural predators for humans. Instead, human-caused environmental factors and counter-aggression seem to have driven tigers to become desperate. Habitat fragmentation, due in part to human colonization and global warming, means tigers cannot freely roam between territories, leading to tigers being pushed from their homes or trapped in areas with little prey and/or shelter.
+
+In regards to human-tiger conflicts, I observed an interesting pattern in my second plot, where attacks/kills on both sides would increase and decrease almost during the same points in time. The p-value is also nothing to scoff at. Though other factors are also at play, as shown in the third plot, I think it's safe to say that tigers do, indeed, believe in the Golden Rule.
+
+At least, the 'treat others based on how they treat you, since that is how they wish to be treated' part.
+
+Obviously, hunting and poaching is one of these factors. Over-hunting of wild prey leaves none left for the tigers, same goes for poaching, and a tiger needs to eat something to survive. Why not the big, clumsy ape parading around in its territory?
+
+In conclusion, based on this analysis, I believe tigers are not the ruthless, man-eating predators we've been commonly conditioned to see them as, but due to our actions they have become starved of land, desperate for food, and weary of humans entering their territories.
+
+And, above all else, they need our help.
+
+**- What exceptions or caveats do you have in regards to your analysis you did?**
+
+I sadly wasn't able to find any open data sets with information on wild prey populations in the Sundarbans region, though I think the data from the conservation awareness survey makes up for it somewhat.
+
+Also, the human-tiger conflicts chart is actually humans attacked/killed in *just* the Sundarbans region of India/Bangladesh vs. tigers killed in all of India, but I'd still have expected the numbers to be flipped if tigers were actually one of our natural predators. I couldn't find anything for tigers killed in the Sundarbans only.
+
+**- What follow up questions do you have?**
+
+How have tiger populations changed since 2019? Are the problems tigers face in India the same as tiger species found in China? Are human males more at risk of being attacked by a tiger than human females?
+
+Does wearing a mask really deter a tiger from attacking, as some people in the human-tiger conflict survey suggested? (Disclaimer: This is a joke. The methods required for gathering such data would be highly unethical and inhumane!)
+
+## Print out session info
+
+Session info is a good thing to print out at the end of your notebooks so that you (and other folks) referencing your notebooks know what software versions and libraries you used to run the notebook.
+
+```{r}
+sessionInfo()
+```
